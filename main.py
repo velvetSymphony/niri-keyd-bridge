@@ -15,13 +15,13 @@ def extract_windows(event, key):
             return event.get('WindowOpenedOrChanged').get('window')
 
 
-def init_add_browser_ids(BROWSER_IDS, window_item):
+def init_add_browser_ids(browser_ids, BROWSERS, window_item):
     if window_item['app_id'] in BROWSERS:
-        BROWSER_IDS.add(window_item['id'])
+        browser_ids.add(window_item['id'])
 
 
-def check_window_id(BROWSER_IDS, window_id):
-    return True if window_id in BROWSER_IDS else False
+def check_window_id(browser_ids, window_id):
+    return True if window_id in browser_ids else False
 
 
 def apply_browser_keyd_config():
@@ -32,9 +32,41 @@ def reset_global_keyd_config():
     subprocess.run(['keyd', 'bind', 'meta+alt.left = left', 'meta+alt.right = right'])
 
 
+def handle_windows_changed(event, BROWSERS):
+    windows = extract_windows(event, key='WindowsChanged')
+    for window_item in windows:
+        init_add_browser_ids(browser_ids, BROWSERS, window_item)
+    print(browser_ids)
+
+
+def handle_window_opened_or_changed(event, BROWSERS, browser_ids):
+    window = extract_windows(event, key='WindowOpenedOrChanged')
+    if window['app_id'] in BROWSERS:
+        browser_ids.add(window['id'])  # if it exists, it exists right?
+        apply_browser_keyd_config()
+    print(f'added or changed id: {window["id"]} browser_ids: {browser_ids}')
+
+
+def handle_window_focus_changed(event, browser_ids):
+    window_id = event['WindowFocusChanged'].get('id')
+    does_it_belong = check_window_id(browser_ids, window_id)
+    if does_it_belong:
+        print(f'id: {window_id} in browser_ids: {browser_ids}')
+        apply_browser_keyd_config()
+    else:
+        print(f'id: {window_id} not in browser_ids: {browser_ids}')
+        reset_global_keyd_config()
+
+
+def handle_window_closed(event, browser_ids):
+    window_id = event['WindowClosed'].get('id')
+    browser_ids.discard(window_id)
+    print(f'removed id: {window_id} from browser_ids: {browser_ids}')
+
+
 if __name__ == '__main__':
     BROWSERS = {'brave-browser', 'firefox', 'chromium-browser', 'google-chrome'}
-    BROWSER_IDS = set()
+    browser_ids = set()
 
     proc = subprocess.Popen(
         ['niri', 'msg', '--json', 'event-stream'],
@@ -44,29 +76,15 @@ if __name__ == '__main__':
     )
     for line in proc.stdout:
         event = json.loads(line)
+
         if event.get('WindowsChanged'):
-            windows = extract_windows(event, key='WindowsChanged')
-            for window_item in windows:
-                init_add_browser_ids(BROWSER_IDS, window_item)
-            print(BROWSER_IDS)
+            handle_windows_changed(event, BROWSERS)
+
         if event.get('WindowOpenedOrChanged'):
-            window = extract_windows(event, key='WindowOpenedOrChanged')
-            window_id = window['id']
-            if window.get('app_id') in BROWSERS:
-                BROWSER_IDS.add(window_id)  # if it exists, it exists right?
-                apply_browser_keyd_config()
-            print(f'added or changed id: {window_id} BROWSER_IDS: {BROWSER_IDS}')
+            handle_window_opened_or_changed(event, BROWSERS, browser_ids)
+
         if event.get('WindowFocusChanged'):
-            window_id = event['WindowFocusChanged'].get('id')
-            does_it_belong = check_window_id(BROWSER_IDS, window_id)
-            if does_it_belong:
-                print(f'id: {window_id} in BROWSER_IDS: {BROWSER_IDS}')
-                apply_browser_keyd_config()
-            else:
-                print(f'id: {window_id} not in BROWSER_IDS: {BROWSER_IDS}')
-                reset_global_keyd_config()
+            handle_window_focus_changed(event, browser_ids)
 
         if event.get('WindowClosed'):
-            window_id = event['WindowClosed'].get('id')
-            BROWSER_IDS.discard(window_id)
-            print(f'removed id: {window_id} from BROWSER_IDS: {BROWSER_IDS}')
+            handle_window_closed(event, browser_ids)
