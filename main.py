@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
 
 import json
-import subprocess
 import logging
+import subprocess
 
 # NOTE: If the key binds do not fire off, ensure you have a /etc/keyd/default.conf config file populated.
 # NOTE: I'll probably add a check, cover it in a wrapper script.
 
-# Set logging stuff, replace prints with it later
+# Set logger object, replace prints with it later
 logging.basicConfig()
 logger = logging.getLogger()
 
 
-def init_add_browser_ids(browser_ids, BROWSERS, window_item):
-    if window_item['app_id'] in BROWSERS:
-        browser_ids.add(window_item['id'])
+def is_browser_window(BROWSERS, window_item):
+    return window_item['app_id'] in BROWSERS
+
+
+def is_window_id_in_browser_id(browser_ids, window_id):
+    return window_id in browser_ids
 
 
 def apply_browser_keyd_config():
@@ -24,25 +27,27 @@ def apply_browser_keyd_config():
 def reset_global_keyd_config():
     subprocess.run(['keyd', 'bind', 'meta+alt.left = left', 'meta+alt.right = right'])
 
+
 # This function may not be required later on, once this script runs as a daemon on startup
 # Only reason this is required now is cause we invoke the script manually once we have opened windows
-def handle_windows_changed(event, BROWSERS, browser_ids):
-    windows = event.get('WindowsChanged').get('windows')
+# The event only fires once
+def handle_windows_changed(windows, BROWSERS, browser_ids):
     for window_item in windows:
-        init_add_browser_ids(browser_ids, BROWSERS, window_item)
+        if is_browser_window(BROWSERS, window_item=window_item):
+            browser_ids.add(window_item['id'])
     print(browser_ids)
 
 
-def handle_window_opened_or_changed(event, BROWSERS, browser_ids):
-    window = event.get('WindowOpenedOrChanged').get('window')
-    init_add_browser_ids(browser_ids, BROWSERS, event)
-    apply_browser_keyd_config()
+
+def handle_window_opened_or_changed(window, BROWSERS, browser_ids):
+    if is_browser_window(BROWSERS, window_item=window):
+        browser_ids.add(window['id'])
+        apply_browser_keyd_config()
     print(f'added or changed id: {window["id"]} browser_ids: {browser_ids}')
 
 
-def handle_window_focus_changed(event, browser_ids):
-    window_id = event['WindowFocusChanged']['id']
-    if window_id in browser_ids:
+def handle_window_focus_changed(window_id, browser_ids):
+    if is_window_id_in_browser_id(browser_ids, window_id):
         print(f'id: {window_id} in browser_ids: {browser_ids}')
         apply_browser_keyd_config()
     else:
@@ -50,8 +55,7 @@ def handle_window_focus_changed(event, browser_ids):
         reset_global_keyd_config()
 
 
-def handle_window_closed(event, browser_ids):
-    window_id = event['WindowClosed']['id']
+def handle_window_closed(window_id, browser_ids):
     browser_ids.discard(window_id)
     print(f'removed id: {window_id} from browser_ids: {browser_ids}')
 
@@ -68,15 +72,17 @@ if __name__ == '__main__':
     )
     for line in proc.stdout:
         event = json.loads(line)
-
-        if event.get('WindowsChanged'):
-            handle_windows_changed(event, BROWSERS, browser_ids)
-
-        if event.get('WindowOpenedOrChanged'):
-            handle_window_opened_or_changed(event, BROWSERS, browser_ids)
-
-        if event.get('WindowFocusChanged'):
-            handle_window_focus_changed(event, browser_ids)
-
-        if event.get('WindowClosed'):
-            handle_window_closed(event, browser_ids)
+        key = next(iter(event))
+        match key:
+            case 'WindowsChanged':
+                windows = event.get(key).get('windows')
+                handle_windows_changed(windows, BROWSERS, browser_ids)
+            case 'WindowOpenedOrChanged':
+                window = event.get('WindowOpenedOrChanged').get('window')
+                handle_window_opened_or_changed(window, BROWSERS, browser_ids)
+            case 'WindowFocusChanged':
+                window_id = event['WindowFocusChanged']['id']
+                handle_window_focus_changed(window_id, browser_ids)
+            case 'WindowClosed':
+                window_id = event['WindowClosed']['id']
+                handle_window_closed(window_id, browser_ids)
