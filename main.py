@@ -38,11 +38,11 @@ def handle_windows_changed(windows, BROWSERS, browser_ids):
     print(browser_ids)
 
 
-
 def handle_window_opened_or_changed(window, BROWSERS, browser_ids):
     if is_browser_window(BROWSERS, window_item=window):
         browser_ids.add(window['id'])
-        apply_browser_keyd_config()
+        if window['is_focused']:
+            apply_browser_keyd_config()
     print(f'added or changed id: {window["id"]} browser_ids: {browser_ids}')
 
 
@@ -53,6 +53,24 @@ def handle_window_focus_changed(window_id, browser_ids):
     else:
         print(f'id: {window_id} not in browser_ids: {browser_ids}')
         reset_global_keyd_config()
+
+
+
+def process(key):
+    logger.info(f' Processing key: {key}')
+    match key:
+        case 'WindowsChanged':
+            windows = event[key]['windows']
+            handle_windows_changed(windows, BROWSERS, browser_ids)
+        case 'WindowOpenedOrChanged':
+            window = event[key]['window']
+            handle_window_opened_or_changed(window, BROWSERS, browser_ids)
+        case 'WindowFocusChanged':
+            window_id = event[key]['id']
+            handle_window_focus_changed(window_id, browser_ids)
+        case 'WindowClosed':
+            window_id = event[key]['id']
+            handle_window_closed(window_id, browser_ids)
 
 
 def handle_window_closed(window_id, browser_ids):
@@ -73,16 +91,4 @@ if __name__ == '__main__':
     for line in proc.stdout:
         event = json.loads(line)
         key = next(iter(event))
-        match key:
-            case 'WindowsChanged':
-                windows = event.get(key).get('windows')
-                handle_windows_changed(windows, BROWSERS, browser_ids)
-            case 'WindowOpenedOrChanged':
-                window = event.get('WindowOpenedOrChanged').get('window')
-                handle_window_opened_or_changed(window, BROWSERS, browser_ids)
-            case 'WindowFocusChanged':
-                window_id = event['WindowFocusChanged']['id']
-                handle_window_focus_changed(window_id, browser_ids)
-            case 'WindowClosed':
-                window_id = event['WindowClosed']['id']
-                handle_window_closed(window_id, browser_ids)
+        process(key)
