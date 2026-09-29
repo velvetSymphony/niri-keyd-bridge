@@ -24,10 +24,12 @@ def is_window_id_in_browser_id(window_id, browser_ids):
 
 
 def apply_browser_keyd_config():
+    logger.info('keyd: applying browser bindings')
     subprocess.run(['keyd', 'bind', 'meta+alt.left = C-S-tab', 'meta+alt.right = C-tab'])
 
 
 def reset_global_keyd_config():
+    logger.info('keyd: resetting bindings')
     subprocess.run(['keyd', 'bind', 'meta+alt.left = left', 'meta+alt.right = right'])
 
 
@@ -83,12 +85,12 @@ if __name__ == '__main__':
         text=True,
         bufsize=1,
     )
-    for line in proc.stdout:
-        event = json.loads(line)
-        try:
-            process(event, BROWSERS, browser_ids)
-        except Exception:
-            logger.exception(f' Failed to process event: {event}')
-        finally:
-            reset_global_keyd_config()
-
+    try:
+        for line in proc.stdout:
+            event = json.loads(line)
+            try:
+                process(event, BROWSERS, browser_ids)
+            except Exception:
+                logger.exception(f' Failed to process event: {event}')
+    finally:
+        reset_global_keyd_config()
