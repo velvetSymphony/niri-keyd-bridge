@@ -12,11 +12,11 @@ logging.basicConfig()
 logger = logging.getLogger()
 
 
-def is_browser_window(BROWSERS, window_item):
+def is_browser_window(window_item, BROWSERS):
     return window_item['app_id'] in BROWSERS
 
 
-def is_window_id_in_browser_id(browser_ids, window_id):
+def is_window_id_in_browser_id(window_id, browser_ids):
     return window_id in browser_ids
 
 
@@ -39,7 +39,7 @@ def handle_windows_changed(windows, BROWSERS, browser_ids):
 
 
 def handle_window_opened_or_changed(window, BROWSERS, browser_ids):
-    if is_browser_window(BROWSERS, window_item=window):
+    if is_browser_window(window, BROWSERS):
         browser_ids.add(window['id'])
         if window['is_focused']:
             apply_browser_keyd_config()
@@ -47,7 +47,7 @@ def handle_window_opened_or_changed(window, BROWSERS, browser_ids):
 
 
 def handle_window_focus_changed(window_id, browser_ids):
-    if is_window_id_in_browser_id(browser_ids, window_id):
+    if is_window_id_in_browser_id(window_id, browser_ids):
         print(f'id: {window_id} in browser_ids: {browser_ids}')
         apply_browser_keyd_config()
     else:
