@@ -31,11 +31,10 @@ def reset_global_keyd_config():
 # This function may not be required later on, once this script runs as a daemon on startup
 # Only reason this is required now is cause we invoke the script manually once we have opened windows
 # The event only fires once
-def handle_windows_changed(windows, BROWSERS, browser_ids):
-    for window_item in windows:
-        if is_browser_window(BROWSERS, window_item=window_item):
-            browser_ids.add(window_item['id'])
-    print(browser_ids)
+# def handle_windows_changed(window, BROWSERS, browser_ids):
+#    if is_browser_window(window, BROWSERS):
+#        browser_ids.add(window['id'])
+#    print(browser_ids)
 
 
 def handle_window_opened_or_changed(window, BROWSERS, browser_ids):
