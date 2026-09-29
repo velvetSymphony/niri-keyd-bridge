@@ -55,12 +55,15 @@ def handle_window_focus_changed(window_id, browser_ids):
 
 
 
-def process(key):
+
+def process(event, BROWSERS, browser_ids):
+    key = next(iter(event))
     logger.info(f' Processing key: {key}')
     match key:
         case 'WindowsChanged':
             windows = event[key]['windows']
-            handle_windows_changed(windows, BROWSERS, browser_ids)
+            for window in windows:
+                handle_window_opened_or_changed(window, BROWSERS, browser_ids)
         case 'WindowOpenedOrChanged':
             window = event[key]['window']
             handle_window_opened_or_changed(window, BROWSERS, browser_ids)
@@ -70,11 +73,6 @@ def process(key):
         case 'WindowClosed':
             window_id = event[key]['id']
             handle_window_closed(window_id, browser_ids)
-
-
-def handle_window_closed(window_id, browser_ids):
-    browser_ids.discard(window_id)
-    print(f'removed id: {window_id} from browser_ids: {browser_ids}')
 
 
 if __name__ == '__main__':
@@ -89,5 +87,5 @@ if __name__ == '__main__':
     )
     for line in proc.stdout:
         event = json.loads(line)
-        key = next(iter(event))
-        process(key)
+        print(event)
+        process(event, BROWSERS, browser_ids)
