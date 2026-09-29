@@ -7,9 +7,12 @@ import subprocess
 # NOTE: If the key binds do not fire off, ensure you have a /etc/keyd/default.conf config file populated.
 # NOTE: I'll probably add a check, cover it in a wrapper script.
 
-# Set logger object, replace prints with it later
-logging.basicConfig()
-logger = logging.getLogger()
+# Logging setup
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+)
+logger = logging.getLogger(__name__)
 
 
 def is_browser_window(window_item, BROWSERS):
@@ -28,32 +31,26 @@ def reset_global_keyd_config():
     subprocess.run(['keyd', 'bind', 'meta+alt.left = left', 'meta+alt.right = right'])
 
 
-# This function may not be required later on, once this script runs as a daemon on startup
-# Only reason this is required now is cause we invoke the script manually once we have opened windows
-# The event only fires once
-# def handle_windows_changed(window, BROWSERS, browser_ids):
-#    if is_browser_window(window, BROWSERS):
-#        browser_ids.add(window['id'])
-#    print(browser_ids)
-
-
 def handle_window_opened_or_changed(window, BROWSERS, browser_ids):
     if is_browser_window(window, BROWSERS):
         browser_ids.add(window['id'])
         if window['is_focused']:
             apply_browser_keyd_config()
-    print(f'added or changed id: {window["id"]} browser_ids: {browser_ids}')
+    logger.info(f'added or changed id: {window["id"]} browser_ids: {browser_ids}')
 
 
 def handle_window_focus_changed(window_id, browser_ids):
     if is_window_id_in_browser_id(window_id, browser_ids):
-        print(f'id: {window_id} in browser_ids: {browser_ids}')
+        logger.info(f'id: {window_id} in browser_ids: {browser_ids}')
         apply_browser_keyd_config()
     else:
-        print(f'id: {window_id} not in browser_ids: {browser_ids}')
+        logger.info(f'id: {window_id} not in browser_ids: {browser_ids}')
         reset_global_keyd_config()
 
 
+def handle_window_closed(window_id, browser_ids):
+    browser_ids.discard(window_id)
+    logger.info(f'removed id: {window_id} from browser_ids: {browser_ids}')
 
 
 def process(event, BROWSERS, browser_ids):
