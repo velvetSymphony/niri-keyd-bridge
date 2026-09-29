@@ -87,5 +87,8 @@ if __name__ == '__main__':
         event = json.loads(line)
         try:
             process(event, BROWSERS, browser_ids)
-        except:
+        except Exception:
             logger.exception(f' Failed to process event: {event}')
+        finally:
+            reset_global_keyd_config()
+
