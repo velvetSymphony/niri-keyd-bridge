@@ -59,6 +59,7 @@ def process(event, BROWSERS, browser_ids):
     match key:
         case 'WindowsChanged':
             windows = event[key]['windows']
+            reset_global_keyd_config()
             for window in windows:
                 handle_window_opened_or_changed(window, BROWSERS, browser_ids)
         case 'WindowOpenedOrChanged':
