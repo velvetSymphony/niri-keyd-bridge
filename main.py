@@ -85,5 +85,7 @@ if __name__ == '__main__':
     )
     for line in proc.stdout:
         event = json.loads(line)
-        print(event)
-        process(event, BROWSERS, browser_ids)
+        try:
+            process(event, BROWSERS, browser_ids)
+        except:
+            logger.exception(f' Failed to process event: {event}')
