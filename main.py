@@ -3,6 +3,7 @@
 import json
 import logging
 import subprocess
+import sys
 
 # NOTE: If the key binds do not fire off, ensure you have a /etc/keyd/default.conf config file populated.
 # NOTE: I'll probably add a check, cover it in a wrapper script.
@@ -92,5 +93,9 @@ if __name__ == '__main__':
                 process(event, BROWSERS, browser_ids)
             except Exception:
                 logger.exception(f' Failed to process event: {line.rstrip()}')
+        #Stream shouldn't die on its own but who knows?
+        returncode = proc.wait()
+        logger.error(f'niri event stream ended (exit code {returncode})')
+        sys.exit(1)
     finally:
         reset_global_keyd_config()
