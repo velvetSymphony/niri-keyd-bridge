@@ -87,10 +87,10 @@ if __name__ == '__main__':
     )
     try:
         for line in proc.stdout:
-            event = json.loads(line)
             try:
+                event = json.loads(line)
                 process(event, BROWSERS, browser_ids)
             except Exception:
-                logger.exception(f' Failed to process event: {event}')
+                logger.exception(f' Failed to process event: {line.rstrip()}')
     finally:
         reset_global_keyd_config()
