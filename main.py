@@ -31,7 +31,7 @@ def apply_browser_keyd_config():
 
 def reset_global_keyd_config():
     logger.info('keyd: resetting bindings')
-    subprocess.run(['keyd', 'bind', 'meta+alt.left = left', 'meta+alt.right = right'])
+    subprocess.run(['keyd', 'bind', 'reset'])
 
 
 def handle_window_opened_or_changed(window, BROWSERS, browser_ids):
